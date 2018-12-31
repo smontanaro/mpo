@@ -3,7 +3,7 @@
 # Pull unsure mail from the SpamBayes setup...
 ssh mail.python.org \
     sudo bash -c '"cd /var/spool/spambayes/unsure ; tar cf - . ; rm *.msg"' \
-    | (cd $(dirname $0) ; tar xvf -)
+    | tar xvf -
 
 # Construct an mbox file from them...
 rm -f u.mbox
