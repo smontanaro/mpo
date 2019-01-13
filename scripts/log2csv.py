@@ -1,20 +1,23 @@
 #!/usr/bin/env python
 
-"Process mpo-smtpd.log file from stdin, write to stdout as CSV."
+"""Process mpo-smtpd.log file from stdin, write to stdout as CSV.
 
-# Fields:
+Output is a CSV file with the following fields:
 
-# * pid - first world of each row - used to collect bits from same
-#   transaction.
-# * connection from - remote host (probably always localhost)
-# * mail from - sender email
-# * rcpt to - recipient email
-# * msg from - sender host
-# * spambayes score
-# * spambayes clues - (not written unless -v given)
-# * message-id
-# * action
-# * quit - (always skipped)
+sender - sender email (left of '@')
+sender-domain sender email domain (right of '@')
+sender-host
+recipient - recipient email (left of '@')
+recipient-domain - recipient domain (right of '@')
+score - SpamBaye score (if the message was scored)
+message-id
+file - output file (if the message was saved as unsure)
+action - end result
+greylist - 'start' or 'end' if message was greylisted
+
+In addition, if the -v flag is given, any SpamBayes clues are added to the
+end of the row (single big cell - otherwise unprocessed).
+"""
 
 import csv
 import getopt
@@ -28,7 +31,7 @@ def main(args):
         if opt == "-v":
             verbose = True
         elif opt == "-h":
-            print("see __doc__")
+            print(__doc__.strip(), file=sys.stderr)
             return 0
 
     records = {}
@@ -43,7 +46,7 @@ def main(args):
         if rest == "mpo_smtpd.py listening on 0:8025":
             continue
         if pid not in records:
-            records[pid] = {}
+            records[pid] = {"pid": pid}
         rec = records[pid]
         fields = rest.split()
         if fields[0:2] == ["connection", "from"]:
@@ -97,8 +100,9 @@ def main(args):
         else:
             print("Unrecognized record:", fields, file=sys.stderr)
 
-    fieldnames = ("sender sender-domain sender-host recipient recipient-domain"
-                  " score message-id file action greylist").split()
+    fieldnames = ("pid sender sender-domain sender-host"
+                  " recipient recipient-domain score message-id"
+                  " file action greylist").split()
     if verbose:
         fieldnames.append("clues")
     writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
