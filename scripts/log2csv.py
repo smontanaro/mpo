@@ -73,9 +73,11 @@ def main(args):
         elif fields[0] == "message-id":
             rec["message-id"] = fields[1]
         elif fields[0:2] in (["message", "accepted"],
+                             ["553", "rejected"],
                              ["553", "rejected,"]):
             rec["action"] = " ".join(fields)
-        elif fields[0:3] == (["553", "invalid", "bounce"]):
+        elif fields[0:3] in (["553", "invalid", "bounce"],
+                             ["553", "message", "rejected,"],):
             rec["action"] = " ".join(fields)
         elif fields[0:2] == ["delaying", "message"]:
             rec["greylist"] = "start"
@@ -89,11 +91,14 @@ def main(args):
             rec["file"] = fields[3]
         elif fields[0] == "quit":
             rows.append(rec)
-        elif fields[0:3] == ["proxy", "error", "data"]:
+        elif fields[0:3] in (["proxy", "error", "data"],
+                             ["proxy", "error", "mail"]):
             rec["action"] = " ".join(fields[3:])
-        elif fields[0:3] == ["554", "permanent", "error"]:
+        elif fields[0:3] in (["554", "permanent", "error"],
+                             ["451", "temporary", "error"]):
             pass
-        elif fields[0:2] == ["rejecting", "attachment"]:
+        elif fields[0:2] in (["rejecting", "attachment"],
+                             ["resetting", "block"]):
             pass
         elif fields[0] == "subject":
             pass
