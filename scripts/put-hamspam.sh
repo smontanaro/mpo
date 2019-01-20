@@ -7,6 +7,6 @@
 # Clean off the VM message cruft.
 bash $(dirname $0)/trim-vm.sh ham.mbox.cull && \
 bash $(dirname $0)/trim-vm.sh spam.mbox.cull && \
-tar cfj - {spam,ham}.mbox.cull \
+tar cfj - *.mbox.cull \
     | ssh mail.python.org \
           sudo bash -c '"cd /usr/local/spambayes-corpus ; tar xvfj -"'
