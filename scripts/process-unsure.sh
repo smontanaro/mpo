@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ x${SSH_AGENT_PID} = x ] ; then
+    echo "Need to run ssh-agent first..." 1>&2
+    exit 1
+fi
+
 # Pull unsure mail from the SpamBayes setup...
 ssh mail.python.org \
     sudo bash -c '"cd /var/spool/spambayes/unsure ; tar cf - . ; rm *.msg"' \
