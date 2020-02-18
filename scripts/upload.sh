@@ -8,4 +8,6 @@
 # uploaded messages.
 
 touch s.mbox h.mbox
+bash $(dirname $0)/trim-vm.sh h.mbox && \
+bash $(dirname $0)/trim-vm.sh s.mbox && \
 scp -C [sh].mbox mail.python.org:/tmp
