@@ -6,10 +6,12 @@ ssh mail.python.org \
           sudo bash -c '"cd /usr/local/spambayes-corpus
 if [ -f /tmp/h.mbox ] ; then
     cat /tmp/h.mbox >> ham.mbox.cull
+    rm -f /tmp/h.mbox
 fi
 mv ham.mbox.cull ham.mbox
 if [ -f /tmp/s.mbox ] ; then
     cat /tmp/s.mbox >> spam.mbox.cull
+    rm -f /tmp/s.mbox
 fi
 mv spam.mbox.cull spam.mbox
 sh train.sh"'
