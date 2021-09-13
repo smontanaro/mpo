@@ -66,3 +66,22 @@ previous processing of the mailbox. The above script strips out those
 headers before upload. YMMV if you use a different mail program.
 
 Finally, train and install as above.
+
+# Analyzing Logs
+
+The scripts directory contains two scripts to help generate useful
+summaries of data from the mpo-smtpd log files. `classify.py`
+classifies the records in one or more log files based on the action
+taken, emitting a CSV file with one row per day. `get-mpo-logs.sh`
+grabs the current collection of log files from `mail.python.org`,
+renaming them to be unique by date. The normal scheme is to run
+
+    bash scripts/get-mpo-logs.sh
+    python scripts/classify.py logs/*
+
+with the output of the second command directed to a CSV file or to a
+[program which can plot CSV files](https://github.com/smontanaro/csvprogs/blob/main/mpl/src/mpl.py).
+Since a week's worth of log files are stored on the server, the
+`get-mpo-logs.sh` script need only be run weekly to construct a full
+group of log files. Unfortunately, running that script from cron might
+be challenging, as it will require entry of your private ssh key.
