@@ -33,6 +33,7 @@ the file. (mpo-smtpd doesn't include timestamps in its log messages.)
 import csv
 import datetime
 import gzip
+import os
 import pathlib
 import re
 import sys
@@ -46,53 +47,61 @@ def open_smart(fname, mode="rt"):
 SPAM = 0.70
 HAM = 0.20
 
+# Note that the order of fieldnames and patterns must match...
+FIELDNAMES = ("date reject-exec reject-spam reject-other"
+              " accept-filtbyp accept-local accept-sbbyp accept"
+              " delayed unsure"
+              " reject-all accept-all total").split()
+PATTERNS = [
+    "[0-9]+ DATE zzyzx",    # should never match!
+    "[0-9]+ 553 rejected, executable attachment[.]",
+    "[0-9]+ 553 rejected, message looks like spam[.]",
+    "[0-9]+ 553 rejected [(]put NOTSPAM in message subject to bypass spam filter[)]",
+    "[0-9]+ message accepted [(]filters bypassed[)]",
+    "[0-9]+ message accepted [(]msg from localhost[)]",
+    "[0-9]+ message accepted [(]spambayes bypassed[)]",
+    "[0-9]+ message accepted",
+    "[0-9]+ delaying message",
+    "[0-9]+ UNSURE zzyzx",  # should never match!
+    "[0-9]+ REJECT zzyzx",  # should never match!
+    "[0-9]+ ACCEPT zzyzx",  # should never match!
+    "[0-9]+ TOTAL zzyzx",   # should never match!
+    ]
+
+PAT_NAMES = list(zip(PATTERNS, FIELDNAMES))
+
 def main():
     "See __doc__"
-    # Note that the order of fieldnames and patterns must match...
-    fieldnames = ("date reject-exec reject-spam reject-other"
-                  " accept-filtbyp accept-local accept-sbbyp accept"
-                  " delayed unsure"
-                  " reject-all accept-all total").split()
-    patterns = [
-        "[0-9]+ DATE zzyzx",    # should never match!
-        "[0-9]+ 553 rejected, executable attachment[.]",
-        "[0-9]+ 553 rejected, message looks like spam[.]",
-        "[0-9]+ 553 rejected [(]put NOTSPAM in message subject to bypass spam filter[)]",
-        "[0-9]+ message accepted [(]filters bypassed[)]",
-        "[0-9]+ message accepted [(]msg from localhost[)]",
-        "[0-9]+ message accepted [(]spambayes bypassed[)]",
-        "[0-9]+ message accepted",
-        "[0-9]+ delaying message",
-        "[0-9]+ UNSURE zzyzx",  # should never match!
-        "[0-9]+ REJECT zzyzx",  # should never match!
-        "[0-9]+ ACCEPT zzyzx",  # should never match!
-        "[0-9]+ TOTAL zzyzx",   # should never match!
-        ]
 
-    pat_names = list(zip(patterns, fieldnames))
-
-    writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames)
+    writer = csv.DictWriter(sys.stdout, fieldnames=FIELDNAMES)
     writer.writeheader()
-    for fname in sys.argv[1:]:
-        counts = dict(zip(fieldnames, [0] * len(fieldnames)))
-        path = pathlib.Path(fname)
-        date = datetime.datetime.fromtimestamp(path.stat().st_mtime).date()
-        counts["date"] = str(date)
-        with open_smart(str(path)) as mpo_log:
-            for line in mpo_log:
-                if "spambayes score" in line:
-                    score = float(line.strip().split()[-1])
-                    if HAM < score < SPAM:
-                        counts["unsure"] += 1
-                else:
-                    for (pat, name) in pat_names:
-                        if re.match(pat, line) is not None:
-                            counts[name] += 1
-                            counts["total"] += 1
-                            break
-        counts["accept-all"] = sum(counts[key] for key in counts if "accept" in key)
-        counts["reject-all"] = sum(counts[key] for key in counts if "reject" in key)
-        writer.writerow(counts)
+    for arg in sys.argv[1:]:
+        if os.path.isdir(arg):
+            for fname in sorted(os.listdir(arg)):
+                writer.writerow(classify(os.path.join(arg, fname)))
+        else:
+            writer.writerow(classify(arg))
+
+def classify(fname):
+    counts = dict(zip(FIELDNAMES, [0] * len(FIELDNAMES)))
+    path = pathlib.Path(fname)
+    date = datetime.datetime.fromtimestamp(path.stat().st_mtime).date()
+    counts["date"] = str(date)
+    with open_smart(str(path)) as mpo_log:
+        for line in mpo_log:
+            if "spambayes score" in line:
+                score = float(line.strip().split()[-1])
+                if HAM < score < SPAM:
+                    counts["unsure"] += 1
+            else:
+                for (pat, name) in PAT_NAMES:
+                    if re.match(pat, line) is not None:
+                        counts[name] += 1
+                        counts["total"] += 1
+                        break
+    counts["accept-all"] = sum(counts[key] for key in counts if "accept" in key)
+    counts["reject-all"] = sum(counts[key] for key in counts if "reject" in key)
+    return counts
 
 if __name__ == "__main__":
     sys.exit(main())
